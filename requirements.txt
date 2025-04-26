@@ -1,5 +1,5 @@
-nltk==3.7
-streamlit==1.14.0  # or the version you're using
-scikit-learn==1.0.2
-pandas==1.4.2
-joblib==1.1.0
+streamlit
+scikit-learn
+pandas
+nltk
+joblib
