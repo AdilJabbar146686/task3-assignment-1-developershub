@@ -1,44 +1,49 @@
 import streamlit as st
-import joblib
-import re
 import nltk
+import re
+import joblib
+import pandas as pd
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 
-# ---- Download NLTK data ----
+# Download required NLTK data (only runs once per deployment)
 nltk.download('punkt')
 nltk.download('stopwords')
+nltk.download('wordnet')
 
-# ---- Load artifacts ----
-model = joblib.load('nb_model.pkl')
-vectorizer = joblib.load('tfidf_vectorizer.pkl')
-
-# ---- NLTK setup ----
+# Initialize preprocessing tools
+stop_words = set(stopwords.words('english'))
 stemmer = PorterStemmer()
 lemmatizer = WordNetLemmatizer()
-stop_words = set(stopwords.words('english'))
 
-# ---- Preprocessing ----
+# Preprocessing function
 def preprocess(text):
     text = text.lower()
-    text = re.sub(r"http\S+|www\S+|@\S+|#\S+", "", text)
-    text = re.sub(r"[^a-zA-Z\s]", "", text)
+    text = re.sub(r"http\S+|www\S+|@\S+|#\S+", "", text)  # Remove URLs, mentions, hashtags
+    text = re.sub(r"[^a-zA-Z\s]", "", text)  # Remove punctuation and numbers
     tokens = nltk.word_tokenize(text)
-    cleaned = [lemmatizer.lemmatize(stemmer.stem(w)) for w in tokens if w not in stop_words]
-    return " ".join(cleaned)
+    cleaned_tokens = [lemmatizer.lemmatize(stemmer.stem(word)) for word in tokens if word not in stop_words]
+    return " ".join(cleaned_tokens)
 
-# ---- Streamlit UI ----
-st.title("📰 Fake News Detector")
-st.write("Enter a news article below and click **Predict**:")
+# Load model and vectorizer
+model = joblib.load("model.pkl")
+vectorizer = joblib.load("vectorizer.pkl")
 
-user_input = st.text_area("News Article", height=200)
+# Streamlit app layout
+st.title("📰 Fake News Detection App")
+st.write("Enter a news headline or article below and click **Predict**.")
+
+user_input = st.text_area("Enter text here:", height=200)
 
 if st.button("Predict"):
-    if not user_input.strip():
-        st.warning("Please enter some text to classify.")
+    if user_input.strip() == "":
+        st.warning("Please enter some text.")
     else:
         processed = preprocess(user_input)
-        vect = vectorizer.transform([processed])
-        pred = model.predict(vect)[0]
-        label = "REAL" if pred == 1 else "FAKE"
-        st.markdown(f"## Prediction: **{label}**")
+        vectorized_input = vectorizer.transform([processed])
+        prediction = model.predict(vectorized_input)[0]
+
+        if prediction == 1:
+            st.success("✅ The news is **REAL**.")
+        else:
+            st.error("🚨 The news is **FAKE**.")
