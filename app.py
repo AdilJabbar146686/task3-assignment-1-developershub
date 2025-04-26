@@ -5,13 +5,15 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 
+# ---- Download NLTK data ----
+nltk.download('punkt')
+nltk.download('stopwords')
+
 # ---- Load artifacts ----
 model = joblib.load('nb_model.pkl')
 vectorizer = joblib.load('tfidf_vectorizer.pkl')
 
 # ---- NLTK setup ----
-nltk.download('punkt')
-nltk.download('stopwords')
 stemmer = PorterStemmer()
 lemmatizer = WordNetLemmatizer()
 stop_words = set(stopwords.words('english'))
