@@ -1,64 +1,56 @@
 import streamlit as st
-import nltk
-import string
 import joblib
-import numpy as np
+import re
+from nltk.stem import WordNetLemmatizer
 
-from nltk.corpus import stopwords
-from nltk.stem.porter import PorterStemmer
+# Load the trained model and vectorizer
+model = joblib.load("nb_model.pkl")              # <-- Updated
+vectorizer = joblib.load("tfidf_vectorizer.pkl")  # <-- Updated
 
-# ---- Ensure necessary NLTK data is available ----
-nltk_packages = ['punkt', 'stopwords']
+# Hardcoded stopwords (no need for nltk.download)
+STOP_WORDS = set([
+    "i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you",
+    "your", "yours", "yourself", "yourselves", "he", "him", "his", "himself",
+    "she", "her", "hers", "herself", "it", "its", "itself", "they", "them",
+    "their", "theirs", "themselves", "what", "which", "who", "whom", "this",
+    "that", "these", "those", "am", "is", "are", "was", "were", "be", "been",
+    "being", "have", "has", "had", "having", "do", "does", "did", "doing",
+    "a", "an", "the", "and", "but", "if", "or", "because", "as", "until",
+    "while", "of", "at", "by", "for", "with", "about", "against", "between",
+    "into", "through", "during", "before", "after", "above", "below", "to",
+    "from", "up", "down", "in", "out", "on", "off", "over", "under", "again",
+    "further", "then", "once", "here", "there", "when", "where", "why", "how",
+    "all", "any", "both", "each", "few", "more", "most", "other", "some",
+    "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too",
+    "very", "s", "t", "can", "will", "just", "don", "should", "now"
+])
 
-for package in nltk_packages:
-    try:
-        nltk.data.find(f'tokenizers/{package}') if package == 'punkt' else nltk.data.find(f'corpora/{package}')
-    except LookupError:
-        nltk.download(package)
+lemmatizer = WordNetLemmatizer()
 
-# ---- Load your trained model and vectorizer ----
-model = joblib.load('nb_model.pkl')           # <-- Corrected filename here
-tfidf_vectorizer = joblib.load('tfidf_vectorizer.pkl')  # <-- Corrected filename here
+# Clean input text
+def clean_text(text):
+    text = re.sub(r"\W", " ", str(text)).lower()
+    tokens = [
+        lemmatizer.lemmatize(tok)
+        for tok in text.split()
+        if tok not in STOP_WORDS and len(tok) > 2
+    ]
+    return " ".join(tokens)
 
-# ---- Preprocessing function ----
-ps = PorterStemmer()
+# Streamlit App
+st.set_page_config(page_title="Fake News Detector", layout="centered")
+st.title("📰 Fake News Detector")
+st.write("Paste a news article below, and the model will predict whether it's **Fake** or **Real**.")
 
-def transform_text(text):
-    text = text.lower()
-    text = nltk.word_tokenize(text)
-    
-    # Remove non-alphanumeric
-    text = [word for word in text if word.isalnum()]
-    
-    # Remove stopwords and punctuation
-    text = [word for word in text if word not in stopwords.words('english') and word not in string.punctuation]
-    
-    # Stemming
-    text = [ps.stem(word) for word in text]
-    
-    return " ".join(text)
+user_input = st.text_area("Enter news article here:", height=200)
 
-# ---- Streamlit UI ----
-st.title('Fake News Detection App')
-
-input_news = st.text_area('Enter the news text')
-
-if st.button('Predict'):
-    if input_news.strip() == '':
-        st.warning('Please enter some text.')
+if st.button("Predict"):
+    if user_input.strip() == "":
+        st.warning("Please enter some news text to analyze.")
     else:
-        # Preprocess
-        transformed_news = transform_text(input_news)
+        cleaned = clean_text(user_input)
+        vectorized_input = vectorizer.transform([cleaned])  # <-- Add this step
+        prediction = model.predict(vectorized_input)[0]
+        label = "🟢 Real News" if prediction == 0 else "🔴 Fake News"  # Your model: 0 = real, 1 = fake
         
-        # Vectorize
-        vector_input = tfidf_vectorizer.transform([transformed_news])
-        
-        # Predict
-        result = model.predict(vector_input)[0]
-        
-        # Display
-        if result == 0:
-            st.success('Prediction: **Real News** 📰✅')
-        else:
-            st.error('Prediction: **Fake News** 🚫📰')
-
+        st.markdown(f"## Prediction: {label}")
