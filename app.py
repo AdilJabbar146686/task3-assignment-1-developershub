@@ -1,47 +1,64 @@
 import streamlit as st
-import joblib
-import re
 import nltk
+import string
+import joblib
+import numpy as np
+
 from nltk.corpus import stopwords
-from nltk.stem import PorterStemmer, WordNetLemmatizer
+from nltk.stem.porter import PorterStemmer
 
-# Download required NLTK data
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('wordnet')
+# ---- Ensure necessary NLTK data is available ----
+nltk_packages = ['punkt', 'stopwords']
 
-# Initialize preprocessing tools
-stop_words = set(stopwords.words('english'))
-stemmer = PorterStemmer()
-lemmatizer = WordNetLemmatizer()
+for package in nltk_packages:
+    try:
+        nltk.data.find(f'tokenizers/{package}') if package == 'punkt' else nltk.data.find(f'corpora/{package}')
+    except LookupError:
+        nltk.download(package)
 
-# Preprocessing function
-def preprocess(text):
+# ---- Load your trained model and vectorizer ----
+model = joblib.load('nb_model.pkl')           # <-- Corrected filename here
+tfidf_vectorizer = joblib.load('tfidf_vectorizer.pkl')  # <-- Corrected filename here
+
+# ---- Preprocessing function ----
+ps = PorterStemmer()
+
+def transform_text(text):
     text = text.lower()
-    text = re.sub(r"http\S+|www\S+|@\S+|#\S+", "", text)
-    text = re.sub(r"[^a-zA-Z\s]", "", text)
-    tokens = nltk.word_tokenize(text)
-    cleaned_tokens = [lemmatizer.lemmatize(stemmer.stem(word)) for word in tokens if word not in stop_words]
-    return " ".join(cleaned_tokens)
+    text = nltk.word_tokenize(text)
+    
+    # Remove non-alphanumeric
+    text = [word for word in text if word.isalnum()]
+    
+    # Remove stopwords and punctuation
+    text = [word for word in text if word not in stopwords.words('english') and word not in string.punctuation]
+    
+    # Stemming
+    text = [ps.stem(word) for word in text]
+    
+    return " ".join(text)
 
-# Load model and vectorizer
-model = joblib.load("nb_model.pkl")
-vectorizer = joblib.load("tfidf_vectorizer.pkl")
+# ---- Streamlit UI ----
+st.title('Fake News Detection App')
 
-# Streamlit app layout
-st.title("📰 Fake News Detection App")
+input_news = st.text_area('Enter the news text')
 
-user_input = st.text_area("Enter a news article or headline:", height=200)
-
-if st.button("Predict"):
-    if user_input.strip() == "":
-        st.warning("Please enter some text.")
+if st.button('Predict'):
+    if input_news.strip() == '':
+        st.warning('Please enter some text.')
     else:
-        processed = preprocess(user_input)
-        vectorized_input = vectorizer.transform([processed])
-        prediction = model.predict(vectorized_input)
-
-        if prediction[0] == 1:
-            st.success("✅ This news is likely **REAL**.")
+        # Preprocess
+        transformed_news = transform_text(input_news)
+        
+        # Vectorize
+        vector_input = tfidf_vectorizer.transform([transformed_news])
+        
+        # Predict
+        result = model.predict(vector_input)[0]
+        
+        # Display
+        if result == 0:
+            st.success('Prediction: **Real News** 📰✅')
         else:
-            st.error("⚠️ This news is likely **FAKE**.")
+            st.error('Prediction: **Fake News** 🚫📰')
+
