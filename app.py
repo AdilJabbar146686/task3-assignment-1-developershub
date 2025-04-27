@@ -2,6 +2,14 @@ import streamlit as st
 import joblib
 import re
 from nltk.stem import WordNetLemmatizer
+import nltk
+
+# Ensure NLTK resources are downloaded
+try:
+    nltk.data.find('corpora/wordnet')
+except LookupError:
+    nltk.download('wordnet')
+    nltk.download('omw-1.4')
 
 # Load the trained model and vectorizer
 model = joblib.load("nb_model.pkl")              # <-- Updated
@@ -29,11 +37,11 @@ lemmatizer = WordNetLemmatizer()
 
 # Clean input text
 def clean_text(text):
-    text = re.sub(r"\W", " ", str(text)).lower()  # Remove non-alphanumeric characters and lowercase text
+    text = re.sub(r"\W", " ", str(text)).lower()  # Remove non-word characters and lowercase
     tokens = [
-        lemmatizer.lemmatize(tok)  # Lemmatize words
+        lemmatizer.lemmatize(tok)
         for tok in text.split()
-        if tok not in STOP_WORDS and len(tok) > 2  # Remove stopwords and short tokens
+        if tok not in STOP_WORDS and len(tok) > 2  # Lemmatize and remove stopwords and short words
     ]
     return " ".join(tokens)
 
@@ -48,13 +56,11 @@ if st.button("Predict"):
     if user_input.strip() == "":
         st.warning("Please enter some news text to analyze.")
     else:
-        cleaned = clean_text(user_input)
-        st.write("Cleaned Text:", cleaned)  # Display the cleaned text for debugging
-        vectorized_input = vectorizer.transform([cleaned])  # Vectorize the cleaned text
-        prediction = model.predict(vectorized_input)[0]
+        cleaned = clean_text(user_input)  # Clean the input text
+        vectorized_input = vectorizer.transform([cleaned])  # Vectorize the cleaned input
+        prediction = model.predict(vectorized_input)[0]  # Get the model's prediction
         
-        # Display debug information
-        st.write("Prediction (Raw Model Output):", prediction)
+        # Map prediction to label
+        label = "🟢 Real News" if prediction == 0 else "🔴 Fake News"  # 0 = real, 1 = fake
         
-        label = "🟢 Real News" if prediction == 0 else "🔴 Fake News"  # Your model: 0 = real, 1 = fake
         st.markdown(f"## Prediction: {label}")
