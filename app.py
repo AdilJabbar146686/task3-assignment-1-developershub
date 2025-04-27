@@ -7,7 +7,7 @@ from nltk.stem import WordNetLemmatizer
 model = joblib.load('nb_model.pkl')
 vectorizer = joblib.load('tfidf_vectorizer.pkl')
 
-# Hardcoded stopwords (no need for nltk.download)
+# Hardcoded stopwords
 STOP_WORDS = set([
     "i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you",
     "your", "yours", "yourself", "yourselves", "he", "him", "his", "himself",
@@ -49,10 +49,13 @@ if st.button("Predict"):
         st.warning("Please enter some news text to analyze.")
     else:
         cleaned = clean_text(user_input)
-        vectorized_input = vectorizer.transform([cleaned])  # Vectorizing the cleaned input
+        vectorized_input = vectorizer.transform([cleaned])
         prediction = model.predict(vectorized_input)[0]
         
-        # Correct prediction logic
-        label = "🟢 Real News" if prediction == 0 else "🔴 Fake News"  # Your model: 0 = real, 1 = fake
+        # 🔥 Correct logic: 1 = Real, 0 = Fake
+        if prediction == 1:
+            label = "🟢 Real News"
+        else:
+            label = "🔴 Fake News"
         
         st.markdown(f"## Prediction: {label}")
