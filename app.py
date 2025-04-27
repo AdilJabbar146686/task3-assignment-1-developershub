@@ -29,11 +29,11 @@ lemmatizer = WordNetLemmatizer()
 
 # Clean input text
 def clean_text(text):
-    text = re.sub(r"\W", " ", str(text)).lower()
+    text = re.sub(r"\W", " ", str(text)).lower()  # Remove non-alphanumeric characters and lowercase text
     tokens = [
-        lemmatizer.lemmatize(tok)
+        lemmatizer.lemmatize(tok)  # Lemmatize words
         for tok in text.split()
-        if tok not in STOP_WORDS and len(tok) > 2
+        if tok not in STOP_WORDS and len(tok) > 2  # Remove stopwords and short tokens
     ]
     return " ".join(tokens)
 
@@ -49,8 +49,12 @@ if st.button("Predict"):
         st.warning("Please enter some news text to analyze.")
     else:
         cleaned = clean_text(user_input)
-        vectorized_input = vectorizer.transform([cleaned])  # <-- Add this step
+        st.write("Cleaned Text:", cleaned)  # Display the cleaned text for debugging
+        vectorized_input = vectorizer.transform([cleaned])  # Vectorize the cleaned text
         prediction = model.predict(vectorized_input)[0]
-        label = "🟢 Real News" if prediction == 0 else "🔴 Fake News"  # Your model: 0 = real, 1 = fake
         
+        # Display debug information
+        st.write("Prediction (Raw Model Output):", prediction)
+        
+        label = "🟢 Real News" if prediction == 0 else "🔴 Fake News"  # Your model: 0 = real, 1 = fake
         st.markdown(f"## Prediction: {label}")
