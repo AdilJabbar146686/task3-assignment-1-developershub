@@ -2,18 +2,10 @@ import streamlit as st
 import joblib
 import re
 from nltk.stem import WordNetLemmatizer
-import nltk
-
-# Ensure NLTK resources are downloaded
-try:
-    nltk.data.find('corpora/wordnet')
-except LookupError:
-    nltk.download('wordnet')
-    nltk.download('omw-1.4')
 
 # Load the trained model and vectorizer
-model = joblib.load("nb_model.pkl")              # <-- Updated
-vectorizer = joblib.load("tfidf_vectorizer.pkl")  # <-- Updated
+model = joblib.load('nb_model.pkl')
+vectorizer = joblib.load('tfidf_vectorizer.pkl')
 
 # Hardcoded stopwords (no need for nltk.download)
 STOP_WORDS = set([
@@ -37,11 +29,11 @@ lemmatizer = WordNetLemmatizer()
 
 # Clean input text
 def clean_text(text):
-    text = re.sub(r"\W", " ", str(text)).lower()  # Remove non-word characters and lowercase
+    text = re.sub(r"\W", " ", str(text)).lower()
     tokens = [
         lemmatizer.lemmatize(tok)
         for tok in text.split()
-        if tok not in STOP_WORDS and len(tok) > 2  # Lemmatize and remove stopwords and short words
+        if tok not in STOP_WORDS and len(tok) > 2
     ]
     return " ".join(tokens)
 
@@ -56,11 +48,11 @@ if st.button("Predict"):
     if user_input.strip() == "":
         st.warning("Please enter some news text to analyze.")
     else:
-        cleaned = clean_text(user_input)  # Clean the input text
-        vectorized_input = vectorizer.transform([cleaned])  # Vectorize the cleaned input
-        prediction = model.predict(vectorized_input)[0]  # Get the model's prediction
+        cleaned = clean_text(user_input)
+        vectorized_input = vectorizer.transform([cleaned])  # Vectorizing the cleaned input
+        prediction = model.predict(vectorized_input)[0]
         
-        # Map prediction to label
-        label = "🟢 Real News" if prediction == 0 else "🔴 Fake News"  # 0 = real, 1 = fake
+        # Correct prediction logic
+        label = "🟢 Real News" if prediction == 0 else "🔴 Fake News"  # Your model: 0 = real, 1 = fake
         
         st.markdown(f"## Prediction: {label}")
